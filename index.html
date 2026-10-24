@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拾光文廊 · 文章展览馆</title>
+<script src="https://aisearch-task.bj.bcebos.com/static/tailwindcss-3.4.17.js"></script>
+<style>
+  :root{
+    --ink:#1c1a17;
+    --paper:#fbf8f3;
+    --brand-rgb: 178, 58, 40;
+    --gold-rgb: 191, 148, 66;
+    --muted:#7a736a;
+  }
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',-apple-system,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 12% -8%, rgba(var(--gold-rgb),.16), transparent 60%),
+      radial-gradient(900px 500px at 92% 4%, rgba(var(--brand-rgb),.10), transparent 62%),
+      linear-gradient(180deg,#fdfbf7 0%, #f6f1e8 52%, #efe8dc 100%);
+    background-attachment:fixed;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:radial-gradient(rgba(28,26,23,.05) 1px, transparent 1px);
+    background-size:22px 22px;
+    opacity:.55;
+  }
+  .serif-display{font-family:'Songti SC','STSong','SimSun',Georgia,serif;}
+  .zen-line{
+    height:1px; flex:1;
+    background:linear-gradient(90deg, rgba(var(--brand-rgb),.55), rgba(var(--gold-rgb),.15), transparent);
+  }
+  /* 文章卡片 */
+  .piece-card{
+    position:relative;
+    background:linear-gradient(180deg,#ffffff 0%, #fdfbf7 100%);
+    border:1px solid rgba(28,26,23,.09);
+    border-radius:14px;
+    box-shadow:0 1px 2px rgba(28,26,23,.04), 0 14px 30px -22px rgba(28,26,23,.35);
+    transition:transform .4s cubic-bezier(.2,.8,.2,1), box-shadow .4s cubic-bezier(.2,.8,.2,1), border-color .4s ease;
+    overflow:hidden;
+  }
+  .piece-card::after{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:linear-gradient(180deg, rgba(var(--brand-rgb),.85), rgba(var(--gold-rgb),.7));
+    transform:scaleY(.28); transform-origin:top;
+    transition:transform .5s cubic-bezier(.2,.8,.2,1);
+  }
+  .piece-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 2px 4px rgba(28,26,23,.05), 0 26px 46px -26px rgba(28,26,23,.42);
+    border-color:rgba(var(--brand-rgb),.28);
+  }
+  .piece-card:hover::after{transform:scaleY(1);}
+  .piece-card.is-open{border-color:rgba(var(--brand-rgb),.45); box-shadow:0 2px 4px rgba(28,26,23,.06), 0 30px 50px -26px rgba(28,26,23,.45);}
+  .piece-card.is-open::after{transform:scaleY(1);}
+  .piece-body{
+    display:none;
+  }
+  .piece-card.is-open .piece-body{display:block; animation:unfold .45s cubic-bezier(.2,.8,.2,1) both;}
+  @keyframes unfold{from{opacity:.92; transform:translateY(6px);} to{opacity:1; transform:none;}}
+  .piece-text p{line-height:1.8; text-indent:2em; margin:0 0 14px;}
+  .piece-text p:first-of-type::first-letter{
+    font-family:'Songti SC','STSong','SimSun',Georgia,serif;
+    font-size:1.9em; font-weight:700; float:left; line-height:1; padding:2px 8px 0 0;
+    color:rgb(var(--brand-rgb));
+  }
+  .tag-chip{
+    font-size:12px; letter-spacing:.06em;
+    color:rgb(var(--brand-rgb));
+    background:rgba(var(--brand-rgb),.07);
+    border:1px solid rgba(var(--brand-rgb),.18);
+    border-radius:999px; padding:2px 10px;
+  }
+  .alpha-badge{
+    font-family:Georgia,'Times New Roman',serif;
+    font-weight:700; font-size:20px; line-height:1;
+    color:#fff;
+    background:linear-gradient(140deg, rgb(var(--brand-rgb)), #8f2f22);
+    border-radius:10px;
+    width:38px; height:38px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 8px 18px -10px rgba(var(--brand-rgb),.9);
+    flex-shrink:0;
+  }
+  .filter-btn{
+    transition:all .28s cubic-bezier(.2,.8,.2,1);
+    border:1px solid rgba(28,26,23,.14);
+    background:rgba(255,255,255,.72);
+    color:var(--ink);
+  }
+  .filter-btn:hover{border-color:rgba(var(--brand-rgb),.4); background:rgba(255,255,255,.95);}
+  .filter-btn.is-active{
+    background:linear-gradient(140deg, rgb(var(--brand-rgb)), #8f2f22);
+    border-color:rgb(var(--brand-rgb));
+    color:#fff;
+    box-shadow:0 10px 22px -12px rgba(var(--brand-rgb),.95);
+  }
+  .search-input:focus{
+    outline:none;
+    border-color:rgba(var(--brand-rgb),.55);
+    box-shadow:0 0 0 4px rgba(var(--brand-rgb),.12);
+    background:#fff;
+  }
+  .stat-num{font-family:Georgia,'Times New Roman',serif; font-weight:700;}
+  .reveal{animation:rise .6s cubic-bezier(.2,.8,.2,1) both;}
+  @keyframes rise{from{opacity:.92; transform:translateY(10px);} to{opacity:1; transform:none;}}
+  mark{background:rgba(var(--gold-rgb),.35); color:inherit; padding:0 2px; border-radius:3px;}
+  .empty-state{animation:rise .5s cubic-bezier(.2,.8,.2,1) both;}
+  ::selection{background:rgba(var(--brand-rgb),.22);}
+</style>
+</head>
+<body>
+<div id="top" class="relative z-10 min-h-screen">
+
+  <!-- ============ 页头 ============ -->
+  <header class="max-w-[1180px] mx-auto px-5 md:px-8 pt-10 md:pt-14 pb-4">
+    <div class="flex items-center gap-4 mb-5">
+      <span class="w-[9px] h-[9px] rounded-full bg-[rgb(var(--brand-rgb))] shrink-0"></span>
+      <span class="text-[12px] tracking-[0.32em] text-[var(--muted)] uppercase">Gallery&nbsp;of&nbsp;Essays</span>
+      <span class="zen-line"></span>
+      <span class="text-[12px] tracking-[0.2em] text-[var(--muted)] serif-display" id="headerDate"></span>
+    </div>
+
+    <div class="grid md:grid-cols-[1.35fr_1fr] gap-8 md:gap-12 items-end">
+      <div>
+        <h1 class="serif-display text-[38px] md:text-[58px] lg:text-[66px] leading-[1.02] font-bold tracking-tight">
+          拾光文廊
+          <span class="block text-[19px] md:text-[24px] font-normal tracking-[0.5em] text-[rgb(var(--brand-rgb))] mt-3">文 章 展 览 馆</span>
+        </h1>
+        <p class="mt-5 text-[16px] md:text-[17px] leading-relaxed text-[#57514a] max-w-[560px]">
+          十五篇短文，十五种观察世界的方式。可按标题检索，亦可令其在字母表上正序倒序排布——挑一篇，坐下来慢慢读。
+        </p>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 md:gap-4">
+        <div class="rounded-xl bg-white/70 backdrop-blur-sm border border-[rgba(28,26,23,.08)] px-3 py-4 text-center">
+          <div class="stat-num text-[26px] md:text-[32px] text-[rgb(var(--brand-rgb))]" id="statTotal">15</div>
+          <div class="text-[12px] text-[var(--muted)] mt-1 tracking-wider">参展文章</div>
+        </div>
+        <div class="rounded-xl bg-white/70 backdrop-blur-sm border border-[rgba(28,26,23,.08)] px-3 py-4 text-center">
+          <div class="stat-num text-[26px] md:text-[32px]" id="statShown">15</div>
+          <div class="text-[12px] text-[var(--muted)] mt-1 tracking-wider">当前显示</div>
+        </div>
+        <div class="rounded-xl bg-white/70 backdrop-blur-sm border border-[rgba(28,26,23,.08)] px-3 py-4 text-center">
+          <div class="stat-num text-[26px] md:text-[32px]" id="statWords">0</div>
+          <div class="text-[12px] text-[var(--muted)] mt-1 tracking-wider">总字数</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ 控制条 ============ -->
+  <div class="sticky top-0 z-30 backdrop-blur-md bg-[rgba(251,248,243,.82)] border-y border-[rgba(28,26,23,.07)] mt-8">
+    <div class="max-w-[1180px] mx-auto px-5 md:px-8 py-4 flex flex-col lg:flex-row lg:items-center gap-4">
+      <!-- 搜索框 -->
+      <div class="relative flex-1 lg:max-w-[440px]">
+        <svg class="w-[18px] h-[18px] shrink-0 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+        </svg>
+        <input id="searchInput" type="text" autocomplete="off"
+          placeholder="输入文章标题搜索，如「故乡」…"
+          class="search-input w-full h-[46px] pl-11 pr-11 rounded-full border border-[rgba(28,26,23,.16)] bg-white/80 text-[16px] placeholder:text-[#a8a29a] transition-all">
+        <button id="clearBtn" type="button" title="清空"
+          class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 w-[28px] h-[28px] rounded-full grid place-items-center text-[var(--muted)] hover:text-[rgb(var(--brand-rgb))] hover:bg-[rgba(var(--brand-rgb),.08)] transition-colors">
+          <svg class="w-[15px] h-[15px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </div>
+
+      <!-- 排序切换 -->
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-[13px] text-[var(--muted)] hidden sm:inline tracking-wide">排序</span>
+        <button id="sortToggle" type="button"
+          class="filter-btn is-active h-[42px] px-4 rounded-full text-[15px] font-medium flex items-center gap-2">
+          <svg id="sortIcon" class="w-[17px] h-[17px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 4v16M7 20l-3-3M17 20V4M17 4l3 3"></path>
+          </svg>
+          <span id="sortLabel">A → Z 升序</span>
+        </button>
+      </div>
+
+      <!-- 字母 / 分类快捷 -->
+      <div class="flex items-center gap-1.5 overflow-x-auto lg:ml-auto pb-1 lg:pb-0" id="letterBar"></div>
+    </div>
+  </div>
+
+  <!-- ============ 文章列表 ============ -->
+  <main class="max-w-[1180px] mx-auto px-5 md:px-8 py-10 md:py-12">
+    <div id="resultHint" class="text-[14px] text-[var(--muted)] mb-6"></div>
+    <div id="list" class="grid gap-5 md:grid-cols-2"></div>
+    <div id="emptyState" class="hidden empty-state text-center py-20">
+      <div class="serif-display text-[64px] leading-none text-[rgba(var(--brand-rgb),.22)]">“ ”</div>
+      <p class="text-[18px] mt-4">没有找到匹配的文章</p>
+      <p class="text-[14px] text-[var(--muted)] mt-2">试试更换关键词，或清空搜索框查看全部 15 篇文章</p>
+    </div>
+  </main>
+
+  <!-- ============ 页脚 ============ -->
+  <footer class="border-t border-[rgba(28,26,23,.08)] mt-6">
+    <div class="max-w-[1180px] mx-auto px-5 md:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p class="text-[13px] text-[var(--muted)]">拾光文廊 · 文章展览馆　|　共收录 15 篇文章</p>
+      <a href="#top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;" class="text-[13px] text-[rgb(var(--brand-rgb))] hover:underline">回到顶部 ↑</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* =========================================================
+   文章数据：此处为示例文章，用户可自行替换 title / author / tag / category 与正文段落
+   正文写在 paragraphs 数组里，每项是一段
+   ========================================================= */
+const ARTICLES = [
+  {
+    id: 1, title: "安徽老街的黄昏", author: "沈砚秋", tag: "随笔", date: "2026-03-04",
+    paragraphs: [
+      "老街是从一碗豆腐脑开始的。天还没亮透，石板路上浮着一层薄薄的水汽，卖豆腐脑的老周已经把那只乌黑的木桶搬到街口。桶盖一掀，白汽腾起来，混着卤汁里八角和桂皮的香气，整条街像是被轻轻推醒了一遍。他舀豆腐脑的动作很稳，勺子在桶里转半圈，恰好是一满碗，再浇上一勺卤子，撒几粒碧绿的葱花。",
+      "我在这条街上住了二十多年，看过它最热闹的样子，也看过它如今的样子。沿街的铺子一家挨着一家，木头的门板被岁月摩挲得发亮。修钟表的老先生戴着铜边眼镜，镊子在齿轮间穿行，那是比绣花还要细的手艺活。他常同我说，钟表这个物件最讲道理，你待它诚心，它就一分一秒不差地陪你走；你若糊弄它，它就偏要走走停停给你看。",
+      "黄昏是老街一天里最动人的时候。夕阳斜斜地从马头墙的缺口里漏进来，把青砖墙面染成暖融融的蜜色。屋檐下的灯笼一盏接一盏亮起，光晕在潮湿的空气里晕开，像谁在水面上滴了一滴稠稠的墨。孩子们放学了，书包甩在肩上，追逐着从巷口跑到巷尾，脚步声在青石板上敲出一串清脆的鼓点。",
+      "我常想，一条老街为什么能让人念念不忘。大约不是因为那些砖瓦木梁，而是因为这里藏着许多人的日常——早点摊的热气、麻将桌上的争执、夏夜里搬着竹椅出来纳凉的老人。这些琐碎得几乎不值一提的东西，凑在一起，就是一座城最结实的记忆。",
+      "夜深了，铺子一间间关上门板。老周收起木桶，修钟表的老先生也收拾好他的工具。只有街角那盏路灯还亮着，把长长的影子投在石板路上。老街便这样沉沉睡去，等着第二天的第一勺豆腐脑，把它重新唤醒。",
+      "我总觉得，判断一条老街是否还活着，要看它清晨的动静。有些老街白天看着热闹，其实住的早就是些租客，彼此不相识，各过各的。而我们的这条街不一样。谁家孩子考上了大学，谁家老人身体不好，谁家小夫妻又吵了架，全街人心里都有一本账。这种彼此知晓又互不打扰的距离感，是老街独有的温情。",
+      "这些年常有外地人来拍照，端着长枪短炮，对着斑驳的墙面、锈迹的门环按个不停。他们拍完就走，去下一个景点。我有时会想，他们镜头里的老街和我的老街，大概是两个地方。他们看见的是好看的旧，我看见的是有人在里面过日子的旧。前者适合挂在墙上，后者只适合住在心里。",
+      "去年政府说要改造这片街区，铺管子、修路面、挂统一的招牌。消息传来，街上的人意见不一。年轻的觉得好，说旧的就是破的；年长的摇头，说改得再新，也不是原来那个味了。后来改造还是做了，石板路被撬开重新铺过，平整是平整了，可踩上去再没有那种高低错落、一脚深一脚浅的感觉。",
+      "只有街口的豆腐脑摊还摆着，老周也还在。他今年六十多了，手抖了些，舀豆腐脑的时候不再那么准，一碗常常多出半勺。我去吃了最后一碗。他一边舀一边同我说：\"这街啊，改来改去，人还是要吃早饭的。\"我点点头，把碗底的卤汁喝干净。这是老街留给我的，最后一点没被改掉的味道。"
+    ]
+  },
+  {
+    id: 2, title: "把日子过成一首慢歌", author: "顾南舟", tag: "随笔", date: "2026-02-18",
+    paragraphs: [
+      "朋友发来消息，说她辞掉了那份人人羡慕的工作，去了南方一座小城，开了一间只有四张桌子的咖啡馆。我问她后不后悔，她隔了很久才回：\"不后悔，只是有点害怕。害怕自己这口气松得太早，也害怕松得不够。\"",
+      "这句话让我想了很久。我们这代人好像都活在一种奇怪的节奏里：早上地铁上刷着别人的生活，中午对着电脑吃外卖，晚上躺在床上继续刷手机。日子像被按了快进键，一年到头回想起来，竟说不出究竟做了些什么。我们总在追赶某个明天，却很少真正活在今天。",
+      "慢下来其实不是懒惰。慢，是为了让眼睛看见路边的花开了；慢，是为了让耳朵听见孩子说了一句很有意思的话；慢，是为了让心在某一刻真正地安静下来，与自己对坐片刻。一个把日子过得鸡飞狗跳的人，未必比一个把日子过得从容的人活得更有价值。",
+      "我开始学着做一些\"没有效率\"的事情。比如周末的早晨不设闹钟，比如在阳台养一盆总也养不活的薄荷，比如花一下午读完一本没什么用的旧书。这些事不能带来任何收入，不能让简历更漂亮，但它们让我的日子有了质地——有了可以触摸的温度和纹理，而不再是一串冰冷的数据。",
+      "后来朋友又发来一张照片：咖啡馆的木桌上摆着一杯拿铁，窗外是淅淅沥沥的雨。照片的角落里有一行她手写的字：\"日子慢一点没关系，只要它是我的。\"我想，这大约就是我想要的答案。",
+      "说到慢，我常想起小时候的夏天。那时候没有空调，一家人搬着竹床睡在院子里，摇着蒲扇，听收音机里的评书。一个故事能讲一个夏天，讲的人和听的人都不着急。夜里星星一颗颗出来，铺满头顶。那样的慢，如今再难有了，不是因为没有院子，是因为我们心里装的事情太多，再没空抬头看星星。",
+      "也有人反驳我，说现在社会竞争这么激烈，慢下来就要被淘汰。这话我不完全反对。人要活下去，总得跑。但我想说的是，跑的时候，别忘了自己为什么跑。如果跑了半辈子，回头发现自己追的那些东西，没有一样是真正想要的，那才是最大的浪费。慢不是目的，清醒才是。",
+      "我开始学着给生活做减法，把那些无意义的社交、无休止的信息流删掉一些。省下来的时间，我用来做几件小事：给远方的父母打个电话，把阳台的几盆花养活，学着做一道以前总说\"没时间\"的菜。这些事很小，却让我第一次觉得，日子它终于是我自己在过，而不是被谁推着走。",
+      "前几天路过公园，看见一位老人坐在长椅上喂鸽子，雪白的鸽子落了他一身。他喂得很认真，一粒一粒撒。旁边人来人往，他全不理会。我站了一会儿，忽然很羡慕他。我想，所谓把日子过成慢歌，也许就是这样——找到一件让你愿意慢慢做的小事，然后不慌不忙地，把它做下去。"
+    ]
+  },
+  {
+    id: 3, title: "城市的晨与夜", author: "程未名", tag: "观察", date: "2026-01-09",
+    paragraphs: [
+      "清晨五点半的城市，是一副与白天完全不同的面孔。环卫工人的扫帚划过路面，发出沙沙的声响，那是这座城市最早的呼吸。早餐铺的卷帘门哗啦啦拉起来，油条下锅的滋滋声、豆浆机低沉的轰鸣，一点点把沉睡的街道唤醒。",
+      "我习惯在这个时间出门散步。此刻的马路宽阔得近乎奢侈，偶尔驶过一辆出租车，车灯在地面拉出长长的光带。天边由深蓝一点点转成鱼肚白，再染上一层薄薄的金。这座城市在无人注视的时刻，露出了它最朴素、最不加修饰的样子。",
+      "而夜晚的城市，是另一回事。霓虹灯把玻璃幕墙照得通亮，写字楼里还亮着几扇窗，那是加班的人。便利店的白光冷冰冰的，收银台前站着打哈欠的店员。地铁末班车的车厢里，人们沉默地刷着手机，玻璃上映出一张张疲惫的脸。",
+      "我常觉得，一座城市真正的性格，不在它白天的繁华，而在它的晨与夜。白天它要应付所有人，要体面，要高效，要展示它最好的一面；只有在清晨和深夜，它才放下戒备，容许人们看见它真实的样子——那些辛劳、那些孤独、那些不为人知的坚持。",
+      "有天凌晨我路过一个工地，看见几个工人蹲在马路牙子上吃泡面，热腾腾的白汽在路灯下打着旋。他们一边吃一边说着家乡话，笑声在空旷的夜里传得很远。那一刻我忽然明白，这座城市的高楼大厦，本就是由无数这样的深夜堆砌起来的。",
+      "清晨的城市里，还有一群容易被忽略的人。送奶工骑着电动车挨家挨户地放奶箱，动作轻得像怕惊扰了别人的梦；菜市场的摊主凌晨三点就去批发市场进货，回来后一边卸车一边打着哈欠；公交司机天不亮就要到场站报到，擦拭车窗、检查车况，然后开着空车驶向第一个站台。他们撑起了这座城市的清晨。",
+      "我常在清晨的公交站台看人。天还没全亮，站台上站着形形色色的人：穿校服的学生睡眼惺忪地背着单词，赶早班的工人捧着热豆浆小口小口地喝，还有刚下夜班的护士，口罩压出的红印还没消退。他们彼此不说话，却有着某种默契——都是这个时间在这座城市里奔波的人。",
+      "城市的夜晚也不是铁板一块。深夜十二点的便利店，是失意者暂时的避难所。我见过西装革履的男人坐在窗边吃一碗关东煮，吃得极慢；见过两个女孩小声说着什么，一个在哭，一个递纸巾。白天人们要在人前保持体面，只有到了深夜，露出了疲惫的那一面。",
+      "所以我越来越喜欢在这两个时段出门。清晨让我看见城市的努力，深夜让我看见城市的心事。白天它属于所有人，清晨和夜晚，它才真正属于那些为它撑起晨昏的、最普通的人。看懂了他们的脸，才算真正认识了这座城市。"
+    ]
+  },
+  {
+    id: 4, title: "独处，是一种能力", author: "苏时序", tag: "思考", date: "2026-02-27",
+    paragraphs: [
+      "我曾经非常害怕一个人。一个人吃饭要开着视频，一个人在家要把电视调到最大声，一个人走路必得塞着耳机。好像只要安静下来，就会有什么东西从心底冒出来，逼着我去面对。",
+      "改变发生在一个出差的晚上。酒店的房间里什么都没有，电视坏了，手机恰好没电。我坐在窗边，第一次完整地听完了一场雨。雨点砸在玻璃上，先是急促的一阵，接着渐渐绵密，最后零零落落地收住。我听见了雨声里的层次，也听见了自己心里的声音：原来我一直在躲，躲的不是孤独，而是那个不敢承认疲惫的自己。",
+      "独处不是把人封闭起来，恰恰相反，它是把心打开的过程。人在热闹里待久了，会习惯性地用他人的眼光来定义自己——别人觉得好，我就觉得好；别人在做什么，我就跟着做什么。只有独处的时候，你才有机会问自己一句：这是我想要的吗？",
+      "当然，独处不等于孤僻。真正会独处的人，反而更懂得如何与人相处。因为一个内心丰盈的人，不需要从别人那里索取存在感，他的给予是自然而然的，不带任何交换的意味。这样的相处，才轻松，才长久。",
+      "我现在依然喜欢热闹，喜欢三五好友围坐一桌，说不完的话，笑不完的段子。但我也学会了在每次聚会之后，留一段只属于自己的时间。泡一杯茶，什么也不做，就那样坐着。那段空白里，藏着一个更完整的我。",
+      "独处的时候，人最容易听见自己的呼吸。平时我们总是被各种声音填满：通知的提示音、会议里的争论、社交场上的客套。这些声音久了，会盖过心底最细微的那个念头。而独处，就是把这些声音一层层剥掉，直到听见自己真正在想什么。这个过程起初并不好受，但习惯了之后，会变得上瘾。",
+      "我认识一位老先生，退休后每天清晨去公园打太极，打完一个人坐在湖边看书。他说年轻时最怕一个人，老了才发现，一辈子陪伴自己最久的，其实还是自己。\"你得先学会跟自己相处，\"他说，\"不然到了晚年，会觉得特别空。\"这话我当时没太在意，后来却常常想起。",
+      "当然，独处也不是要你拒绝所有的关系。它更像是一种缓冲。就像一根拉满的弓，总要有松下来的时候，不然会崩断。我们在人群里耗尽了力气，需要通过独处把力气一点点补回来。补够了，才有能量去爱别人、去做好一件事。",
+      "如今的我，一个人待着的时候会铺开稿纸写点什么，或者只是煮一壶咖啡，看着水蒸气慢慢散开。日子在独处里变得很轻，也很清楚。我渐渐明白，那种曾经让我恐惧的安静，其实是一份很贵的礼物——它让我在喧闹的世界之外，还保留了一小块只属于自己的地方。"
+    ]
+  },
+  {
+    id: 5, title: "古镇的雨", author: "林又青", tag: "游记", date: "2026-03-19",
+    paragraphs: [
+      "到古镇的第二天就下起了雨。起初是细雨，斜斜地飘着，不怎么碍事；到了午后，雨势大起来，檐下挂起一串串水帘，整条街都被泡在朦胧的水汽里。",
+      "我原以为下雨会扫兴，没想到反而是这场雨让古镇活了过来。雨落在青石板上，把几百年的坑洼都填满了，映出天光，亮得像一地的碎银子。河面上雨点密布，一圈圈涟漪撞在一起，散开又聚起。石桥的轮廓在雨里虚掉了一半，只剩下一个温和的影子。",
+      "巷子里没什么人，只有几家铺子还开着。店主也不揽客，坐在门槛上泡茶，见我走过，只是点一下头。我找了家临河的茶馆坐下，要了一壶本地的绿茶。茶汤是浅浅的黄绿色，入口微苦，回甘很慢。窗外的雨声、河水的流淌声、偶尔传来的橹声，混在一起，成了最好的背景音。",
+      "古人说\"留得残荷听雨声\"，大约就是这样的心境。人在旅途上，总想赶着看更多的景，拍更多的照，好像不如此就白来一趟。可真正留下印象的，往往不是那些明信片上的标准景色，而是某个下雨的午后，你坐在一间陌生的小茶馆里，什么也不做，只是听雨。",
+      "傍晚雨停了，天空被洗过一样干净。屋顶的瓦片还在滴水，檐角挂着最后一颗水珠，迟迟不肯落下。我沿着湿漉漉的长巷往回走，鞋底踩出水声。回头看时，古镇已经亮起了灯，灯火落在水面上，一摇一晃的，像一封没有寄出的旧信。",
+      "住在这镇上的人，对雨早就习以为常。开客栈的老板娘说，这地方一年有小半年在下雨，起初外地游客还抱怨，来的次数多了，反倒专挑雨天来。她说：\"晴天的古镇，全国到处都有；雨天的古镇，只此一家。\"我一想，确实是这个道理。",
+      "雨天的古镇，连声音都变了。石板路吸走了脚步声，是闷的；屋檐水落在石阶上，一下一下，是脆的；远处河道里，乌篷船的橹声从雨雾中传过来，是虚的。这些声音混在一起，把整座镇子衬得格外安静。我在巷子里走了半个钟头，没听见一句高声说笑，人们说话都自觉放轻了。",
+      "吃饭的时候，店主给我端来一碗热汤面，说雨天湿气重，喝点姜汤暖暖。面是很普通的雪菜肉丝面，可在这湿冷的午后，一口热汤下肚，浑身都熨帖了。我忽然觉得，旅途里最让人记住的，往往不是哪个名胜，而是这样一个素不相识的人，在你冷的时候递过来的一碗热汤。",
+      "离开那天，雨还没停。我撑着伞在码头等船，回头看那条湿漉漉的老街，屋檐在雨里连成起伏的波浪线。船来了，我上船坐定，看古镇在身后一点点退远、变淡，最后融进一片灰蒙蒙的水汽里。它好像从来没有出现过，只在我心里，留下了一场下不完的雨。"
+    ]
+  },
+  {
+    id: 6, title: "厨房里的烟火气", author: "周砚", tag: "生活", date: "2026-01-23",
+    paragraphs: [
+      "外婆的厨房不大，却总是热气腾腾的。灶台上摆着一排粗细不一的瓷罐，装盐的、装糖的、装花椒的，罐口都磨得发白。她做饭从不看菜谱，抓一把盐、倒一勺酱油，全凭手上的感觉，可每一次做出来的味道都分毫不差。",
+      "我小时候最爱蹲在灶边看她炒菜。油热了，葱姜下锅，滋啦一声，香气立刻就冲了满屋子。她的锅铲在锅里翻飞，动作干净利落，锅气十足。她说，炒菜最忌犹豫，火候到了就得下手，慢了就是慢了，补救不回来的。这话后来我想了很多年，觉得说的不只是炒菜。",
+      "年夜饭是外婆一年中最隆重的一顿。她从腊月就开始准备，腌腊肉、灌香肠、做酱鸭，阳台上挂得满满当当。除夕那天，她天不亮就起来，和面、剁馅、上笼蒸。到了傍晚，一桌子菜齐齐摆开，热气氤氲里，一家人的脸都红扑扑的。",
+      "后来外婆年纪大了，做不动了。我学着做她那些菜，照着记忆里的样子，一点一点地试。可无论怎么努力，总觉得差那么一点意思。母亲说，差的不是手艺，是时候——那道菜里合着几十年的日子，你炒不出来是正常的。",
+      "如今每逢过年，我还是会照着外婆的法子做一桌子菜。厨房里重新升起热气的时候，我总觉得她还在灶边站着，一边翻着锅，一边回过头来对我说：火候到了，别犹豫。",
+      "我渐渐发现，一个家的味道，是会被记住一辈子的。无论你走多远，尝过多少山珍海味，心里惦记的，还是小时候那口家常菜。这不是因为家常菜有多好吃，而是因为那味道里，藏着你最放松、最不设防的年月。人的味觉是有记忆的，它比脑子记得更牢。",
+      "做饭这件事，最能把人从繁忙里拉回来。切菜的时候要专注，一不留神就切到手；炒菜的时候要看火，稍有分心就糊了锅。这种需要全神贯注的活儿，恰恰能让人暂时忘掉工作上的烦恼。所以心情不好的时候，我常常选择下厨，等一桌子菜端上桌，心也差不多平静了。",
+      "我也喜欢做饭时家里的那种热闹。锅碗瓢盆的声响、油烟机的嗡鸣、食物的香气，混在一起，是一个家最生动的背景。一个人住久了会觉得冷清，可只要厨房里亮着灯，灶上有火，屋子就立刻有了生气。所谓烟火气，说的大概就是这种感觉。",
+      "有朋友问我，一个人吃饭也值得这么折腾吗？我想了想说：值。因为你认真对待的不是一顿饭，是你自己的日子。把饭好好做，把饭好好吃，这一天就不算白过。热气腾腾的厨房，是一个人对生活最基本的诚意。"
+    ]
+  },
+  {
+    id: 7, title: "书房里的四季", author: "陈墨", tag: "散文", date: "2026-02-02",
+    paragraphs: [
+      "我的书房朝南，一扇窗正对着院子里的那棵老槐树。四季从这个窗口进来，把一年的时间摊开在一张书桌上。",
+      "春天最先到达的是光。三月的阳光还怯生生的，斜斜地照进来，在书脊上停一会儿就走。槐树抽芽的时候，窗玻璃上会落下细碎的影子，风一吹，影子在纸面上轻轻地晃。这时候最适合读诗，读那些句子短、留白多的旧诗，一个字一个字地嚼，能嚼出春天的味道。",
+      "夏天是浓绿的。槐树的叶子长密了，把窗口框成一幅绿的画。蝉在外面叫个不停，声浪一波接一波。我会把窗开大些，让风进来。夏天的阅读总是散漫的，读两行就走神，索性放下书，看光影在地板上慢慢爬，从东边爬到西边，一天就这么过去了。",
+      "秋天最好。天高了，云淡了，光变得清透。槐叶转黄，一片两片地落，落在窗台上，落在摊开的书页上，落在我写字的手背上。这时候的阅读是沉下来的，能一口气读长篇，读那些厚厚的历史、传记、小说，读得忘了时间。书桌上那盏台灯，常常亮到深夜。",
+      "冬天最安静。树秃了，光也淡了，窗外是灰白的天。我把椅子挪到离窗最近的地方，让那点微弱的阳光落在膝盖上。冬天的书读得最慢，也记得最牢。等合上书抬起头，才发现院子里已经飘起了今年的第一场雪。四季就这样，在书房里转了一圈，又回到起点。",
+      "我常觉得，书房是一个人最私密的地方。它不像客厅要迎客，不像卧室要休息，它只属于你和你的想法。书架上哪些书被翻旧了，哪些还蒙着灰，书桌抽屉里夹着几张旧车票、几封信，都悄悄记着这些年你走过的路。别人进来坐一坐，未必看得出什么，只有你自己知道，每一样东西都有来历。",
+      "晚上是最适合读书的时候。窗外黑了，灯亮起来，世界只剩下一小圈光。这时读书，心最容易沉。读到好的句子，会不由自主地停下来，反复念几遍，像在嚼一颗糖。有时候读到一个故事，忽然想起多年前的某个人、某件事，就合上书发一会儿呆，回过神来，时间已经过去了半个小时。这样的浪费，我愿意。",
+      "我也喜欢在书桌上摆一点没用的东西：一块从河边捡的石头，一盆总也长不大的文竹，一只旧茶杯。它们不承担任何功能，只是安安静静地待着。可正是这些无用的东西，让一张书桌有了温度。人不能只靠有用活着，那些没用的东西，才让人成其为人。",
+      "四季轮转，书桌上的光阴也一年年老去。我在这里读过少年时的心事，读过青年时的困惑，也读过成年后的疲惫。书换了一批又一批，窗外的树长高了，我的头发里也添了白发。可只要推开书房的门，在那张椅子上坐下来，外面的喧闹就被挡在了门外。这里有我的四季，也有一个始终安静的自己。"
+    ]
+  },
+  {
+    id: 8, title: "北方的雪", author: "赵望舒", tag: "散文", date: "2026-01-06",
+    paragraphs: [
+      "南方的朋友问我，北方的雪到底有什么不一样。我想了想说，南方的雪是客气，北方的雪是当真。南方的雪落下来，羞羞答答的，落在地上就化，仿佛怕给谁添麻烦。北方的雪不一样，它下起来是铺天盖地的，一场雪能把整个世界重新写过一遍。",
+      "雪是从夜里开始下的。睡前还没有一点征兆，第二天推开门，天地已经换了一副样子。院墙矮了一截，树枝压弯了腰，地上的坑坑洼洼都被填平了，整个世界变得圆润、安静。走在雪地上，脚下发出\"咯吱咯吱\"的声响，那是冬天最好听的音乐。",
+      "小时候最爱下雪的日子。一群孩子冲出去，堆雪人、打雪仗，手冻得通红也不肯回家。屋檐下挂着一排排冰溜子，晶莹剔透，掰一根下来含在嘴里，凉得直跺脚。晚上回家，母亲把湿透的棉鞋架在炉边烘，屋子里飘着淡淡的焦味，那是童年最踏实的味道。",
+      "北方的雪下得大，也化得慢。它会在屋檐上、树梢上、田埂上待上一整个冬天，把整个世界都衬得干干净净。等到开春，雪一点一点地消融，渗进泥土里。老农说，瑞雪兆丰年，雪水养地，来年的庄稼才长得壮。",
+      "后来我到了南方，很多年没见过那样的大雪。每逢冬天，总忍不住抬头看天，盼着能有那么一场。可南方的天空总是含含糊糊的，落下来的那点白，还没有积起来就没了。我才明白，有些东西是家乡独有的，离开了就再难遇见。就像那场铺天盖地的雪，它不只下在北方，也下在一个人的记忆里，一整个冬天都不化。",
+      "北方人过冬，是有讲究的。入冬前要囤白菜，一车一车地买，码在楼道里、窗台上，一冬天就靠它了。腌酸菜的大缸搬出来，一层白菜一层盐，压上大石头，等它慢慢发酵。到了最冷的时候，屋里烧着暖气，热气腾腾，外面零下二三十度，窗户上结满冰花。人们穿着单衣在屋里吃冻梨、嗑瓜子，那种冷热分明的踏实，是南方人体会不到的。",
+      "雪后初晴的日子最好看。太阳出来了，雪地反着光，亮得晃眼。屋檐上的积雪开始融化，滴滴答答地落下来，到了夜里又冻成冰溜子。孩子们踩着雪上学，书包甩在身后，呼出的白气一长一短。路边的小卖部里传出收音机的声音，卖热乎乎的烤地瓜。整个冬天就这样，在一片白茫茫里，缓慢而温暖地过着。",
+      "我也记得雪天的热闹。下大雪时，单位会组织扫雪，大家拿着铁锹、扫帚一起上，说说笑笑，不一会儿就扫出一条路。街坊邻居之间也格外亲近，谁家有车陷进雪里，路过的都会搭把手。雪是冷的，可雪天里的人情是热的，这份热乎，让再长的冬天都不难熬。",
+      "如今每逢下雪，我都会给北方的老母亲打个电话，问问家里冷不冷，雪下得大不大。她总说：\"没事，暖气热着呢。\"可我知道，我不在她身边，她一个人的冬天，总归是冷清些的。所以那场北方的雪，对我来说，从来不只是一场雪，它还是电话那头的一声问候，是隔着千里也化不开的一份牵挂。"
+    ]
+  },
+  {
+    id: 9, title: "读书这件小事", author: "徐怀瑾", tag: "思考", date: "2026-03-11",
+    paragraphs: [
+      "有人问我每天读书有什么意义。这个问题我认真想过，最后发现，读书最大的意义，恰恰是它\"没有意义\"——它不能让你立刻升职加薪，不能让你在饭桌上多几个谈资，也不能保证你的人生因此更顺遂。但正是这种无用，构成了它的全部价值。",
+      "我在书里遇见过很多人。有在稻田里走了一辈子的农人，有在雪夜里跋涉千里的旅人，有在废墟上重建家园的匠人，也有在深夜里独自哭泣的母亲。这些人我此生未必能够相识，但因为他们的故事被写下来，我便得以借着一双陌生的眼睛，多看了世界几眼。",
+      "读书也让我活得从容一些。年轻时总以为天大的事，读多了才发现，早就有人经历过，而且活了下来。那些以为过不去的坎，那些觉得想不通的道理，原来在几百年前就被人反复咀嚼过。前人踩过的坑，替我照亮了一小段路。",
+      "当然，读书不能代替真实的经历。一个人若只在书里活，就会染上一种轻飘飘的毛病，说起话来头头是道，做起事来却一塌糊涂。所以我一直觉得，读万卷书和行万里路是一件事的两面：书让你看见远处的世界，路让你验证书里的话。两者缺一不可。",
+      "如今我依然每天读书，不为别的，只为在那些疲惫的夜晚，还能有一个安静的去处。翻两页也好，读一章也罢。书就在那里，不急不躁，等着你在任何一个时刻推门进去，坐下来，让世界的噪声暂时退到门外。",
+      "我读书有个坏毛病，喜欢在页边上乱写。读到会心的地方就画一道线，读到不明白的地方就打个问号，有时候还会跟作者\"争辩\"几句。几年后重读同一本书，看见当年留下的字迹，常常觉得好笑：原来那时我在为这样的事较真。书没变，是我变了。这些批注，像是一封封写给过去的自己的信。",
+      "有人嫌读书慢，说现在网上有解读、有速读、有五分钟讲完一本书。我不否认这些方式有用，可它们代替不了自己读。因为读书的乐趣，一半在结果，一半在过程。那些慢慢啃下去的句子，那些读到深夜忽然被击中的瞬间，是任何提炼都替代不了的。走捷径得来的知识，也是轻飘飘的。",
+      "我也渐渐明白，读书不必求多。一年读一百本，不如把十本读进去。真正改变一个人的，从来不是读了多少书，而是有没有几本书，读进了心里，变成了看世界的方式。好书需要反复读，像老朋友，每次见面都能聊出新东西来。",
+      "这些年搬家搬了好几次，扔掉过很多东西，唯独书一本也没舍得丢。它们跟着我从一个城市到另一个城市，从一个住处到另一个住处。每本书上都有一段时光。如今它们整整齐齐地立在书架上，我看着它们，就像看着自己走过的路。读书这件小事，我一做就是这么多年，大约还要一直做下去。"
+    ]
+  },
+  {
+    id: 10, title: "从此故乡是远方", author: "方知远", tag: "散文", date: "2026-02-08",
+    paragraphs: [
+      "第一次离家是在一个秋天的清晨。母亲往我的行李箱里塞了整整一袋自家晒的腊肉，父亲把我送到长途车站，一路上没说几句话。车开动的时候，我回头看见他还站在原地，身影被晨雾裹住，越来越小，最后成了一个模糊的点。",
+      "在外面的日子，故乡成了手机里的一段视频，成了母亲每周一次的电话，成了天气预报里那个和我所在城市完全不同的温度。每次降温，她都会打来电话说：\"那边冷了吧，多穿点。\"她不知道，我所在的城市其实比家里还暖和些，但她总是先感受到我这里的冷。",
+      "后来我才懂得，所谓故乡，并不是地图上的一个点，而是一整套只有在那里才成立的说话方式和相处习惯。是街坊见面时那句\"吃了没\"，是逢年过节时那些繁琐却郑重的仪式，是无论走多远、只要一开口就能听出来的口音。这些东西，你在别的地方一样都找不回来。",
+      "我每年都回去。可每次回去都觉得故乡又陌生了一点。老房子拆了，童年的那条河被砌了水泥护栏，儿时的玩伴个个改了模样，见面时除了寒暄几句近况，竟不知该说什么。母亲的白发又多了些，父亲的背也弯了些。故乡还在那里，只是那个我熟悉的故乡，再也回不去了。",
+      "有一年冬天，我在外地的街头闻到一股熟悉的腊肉香。我循着味找过去，是个卖湖南腊味的小摊。我买了一块，回来蒸熟，就着白米饭吃。那一口下去，眼泪就下来了。原来所谓乡愁，就是这一小口吃的，是舌尖上那点化不开的、属于家乡的味道。",
+      "在大城市里打拼的人，大概都懂那种感觉：白天忙得脚不沾地，顾不上想家；一到夜深人静，或者逢年过节，那种想念就会毫无防备地涌上来。你想的不是什么大道理，就是母亲在厨房做饭的背影、父亲坐在门口抽烟的样子、巷子里那棵老树、河边那块洗衣服的青石板。这些画面越想越清晰，清晰得让人睡不着。",
+      "父亲去世那年，我回去得晚了。赶到家时，他已经被抬进了堂屋。母亲说他走的时候很安详，只是念叨了一句\"还没见着老小回来\"。我在灵前跪了很久，一句话也说不出来。那之后的很多年，我每次回家，推开院门还会下意识地想喊一声爸。然后才想起，院子里不会有人应了。故乡从此少了一个等我的人。",
+      "如今我每年都尽量回去多待几天，陪母亲说说话，去父亲的坟前坐一坐。我知道自己回不去那个童年了，但我想让母亲知道，无论走多远，这个家还在我心里。故乡之所以叫故乡，不在地图上，而在那些惦记你、你也惦记着的人身上。只要他们还在，故乡就还在。",
+      "我常想，人这一生大概都在做同一件事：从一个地方出发，去往另一个地方，然后发现，最想回去的，还是最初的那个地方。可等你回过头，那扇门后站着的人已经换了，街也改了模样。从此，故乡成了一个只能想念、不能抵达的远方。这是每个离家的人，都要付出的代价。"
+    ]
+  },
+  {
+    id: 11, title: "母亲的手", author: "何以安", tag: "散文", date: "2026-01-15",
+    paragraphs: [
+      "我一直觉得，一个人的年纪会先长在手上。母亲今年六十岁，头发染了又染，脸倒是保养得还行，只有那双手，怎么藏也藏不住岁月。手背的皮肤薄得能看见青色的血管，指节因为常年劳作而微微变形，掌心是硬硬的茧。",
+      "小时候，我最怕那双手。冬天犯了错，她巴掌落下，又快又准。可我也最依赖那双手。发烧的夜里，那双手一遍遍地敷上我的额头；下雨的天，那双手把我的书包护在怀里；过年的早晨，那双手给我穿上最厚的那件棉袄，领口总要用力往上提一提，把我整个人裹得严严实实。",
+      "母亲的手很巧。村里面谁家办喜事，都要请她去做面点。面团在她手里翻几下，捏出的小兔子、小鲤鱼活灵活现，上笼一蒸，蓬起来，白白胖胖的，孩子们围着抢。她做针线活也利索，我的棉裤破了个洞，她能绣上一朵小花，补得比原来还好看。",
+      "这些年我离家在外，每次回去都为那双手心疼。我说妈，家务别做了，我给你请个钟点工。她摆摆手说，做惯了，闲下来反倒难受。后来我给她买护手霜，她收下了，用了几次就搁在一边。她大约觉得，一双手要是变得又白又嫩，就不像一双手了。",
+      "上个月我又回了趟家。进门时母亲正在厨房剁排骨，听见动静回过头来。那一刻我看见她的手，握着刀柄，指节绷得发白。我忽然想起很小的时候，也是这双手，抱着我，怕我摔着，怕我疼。如今我长大了，她的手却再也没能松开——她一生都在为我们撑着，撑到自己的手再也舒展不开。",
+      "母亲的记性大不如前了。有次她给我打电话，说着说着忽然问：\"你吃了吗？\"隔了两分钟又问一遍。以前我觉得她啰嗦，现在却听出了另一层意思：她老了，那些反复的叮咛，是她对这个世界的牵挂，也是她害怕遗忘的方式。她怕记不住我的近况，怕有一天连我的声音都认不出。",
+      "我给她买了按摩手部的小仪器，教她用了几次。她嘴上说麻烦，其实每次用完都会念叨一句\"还是孩子孝顺\"。有次我视频，见到她正把护手霜推开，一点一点抹在指节上，动作很慢，抹完还摊开手掌看了一会儿。那一刻我心里说不出是什么滋味，想起她年轻时那双利落、有力的手，如今竟要这样小心翼翼地照看。",
+      "我想起小时候写过一篇作文，题目是《我的母亲》，写她起早贪黑地做饭洗衣。老师给了高分，我得意地拿回家给她看。她识字不多，把作文读了两遍，笑着说\"写得好\"，然后就去厨房忙了。多年后我才明白，那篇作文里的母亲，不过是她最平常的一天。她这一生，把我们写得厚厚的，却把自己过得很薄。",
+      "前阵子看了一部纪录片，讲的是人的衰老。片子里说，人到了一定年纪，身体会像退潮一样，一点一点把力气收回去。我看着屏幕，忽然就想到母亲的手。那双手曾经撑起过一个家，如今连拧瓶盖都要请人帮忙。可她还是不肯闲着，说自己还能做饭、还能扫地，就还算个有用的人。我多想告诉她：妈，您什么都不用做了，您只要好好地在那儿，就够了。"
+    ]
+  },
+  {
+    id: 12, title: "慢一点，也来得及", author: "许知白", tag: "随笔", date: "2026-03-26",
+    paragraphs: [
+      "三十岁那年，我陷入前所未有的焦虑。同龄人纷纷换了更大的房子、更好的车子，朋友圈里晒的都是升职、带娃、旅行。而我好像一直停在原地，做着不好不坏的工作，过着不咸不淡的日子。有段时间，我每天醒来第一件事就是算：我又浪费了多少时间。",
+      "这种焦虑最伤人的地方，在于它让你看不见自己已经拥有的东西。你眼里只有别人的进度条，只有那些你还够不着的目标，于是每一次比较都像一记耳光，把自己打得更低。我甚至开始怀疑，是不是这辈子就要这样平庸下去了。",
+      "转机来自父亲的一次住院。病房里都是上了年纪的人，有的一辈子操劳，有的年轻时风光无限，如今都一样躺在窄窄的病床上。父亲同我说：\"人这一辈子啊，过的不是别人眼里那几十年，是自己心里的那几个瞬间。你想清楚了，就不慌了。\"",
+      "那之后我开始放慢脚步。不在群里比进度，不再拿别人的时间表衡量自己。我开始把周末的时间花在真正喜欢的事情上——读一些旧书，学一门慢功夫的手艺，陪父母散步。渐渐地，那些让我彻夜难眠的焦虑，一件件淡了下去。",
+      "如今我还是做着那份普通的工作。但我不再觉得那是失败。我明白了一个道理：人生不是一场需要赶超谁的比赛，而是一段需要好好走完的路。走得快的人未必看得多，走得慢的人未必到不了。慢一点，也来得及——只要你走的方向，是你自己选的。",
+      "我也学会了不被\"应该\"绑住。三十岁应该结婚，三十五岁应该买房，四十岁应该做到什么职位——这些说法听得多了，会让人误以为人生有一个标准答案。可真正过日子的，是你自己。有人二十岁就找到了方向，有人五十岁才重新出发，都来得及。人生的答案是活的，不是印在卷子上的。",
+      "说到焦虑，我后来想通了它的来路。焦虑其实来自比较：你拿自己的日常，去比别人的高光。可每个人的生活都是一地鸡毛的，只是别人不会发给你看。朋友圈里没有哪个晒加班到凌晨三点、被领导当众批评的样子。你看到的都是精心挑出来的那一面，拿它去比自己的全部，当然会输。",
+      "父亲出院后，我们爷俩有过一次长谈。他说他这一辈子，年轻时也急过、慌过，总觉得别人比自己快。可到了这个年纪回头看，那些当年让他彻夜难眠的差距，如今都淡得几乎想不起来了。\"钱多钱少，日子都是这么过。\"他说，\"关键是别把自己的日子，过成了别人的日子。\"",
+      "现在每天出门，我会特意留出十分钟，不赶路，就慢慢走。看看路边的树，看看天，看看行人。日子还是那个日子，事还是那些事，可因为慢下来了，心里踏实了许多。我想，也许所谓的成长，就是从拼命追赶，到慢慢走自己的路。这条路不一定最快，但它是我的。"
+    ]
+  },
+  {
+    id: 13, title: "小城的黄昏", author: "郑停云", tag: "观察", date: "2026-02-21",
+    paragraphs: [
+      "小城的黄昏是从菜市场开始的。五点一过，早市的热闹散了，取而代之的是另一种喧腾：下班的人涌进市场，提着刚买的菜，和摊主讨价还价。青菜上的水珠还没干，鱼摊的老板手脚麻利地剖鱼，血水顺着案板流进桶里。这是个烟火气最足的地方，人们用一篮子菜，把一天的疲惫卸下来。",
+      "出了菜市场，天边的云开始变色。先是极浅的粉，然后是橙，最后烧成一大片浓烈的橘红。小城没有什么高楼，天显得格外开阔。晚霞落在河面上，把水面也染红了。几艘晚归的渔船靠了岸，船夫收网，动作很慢，像是不舍得这一天的结束。",
+      "广场上渐渐热闹起来。大妈们带着音响来了，跳起广场舞；老人坐在长椅上聊天，说的都是些家常琐事；孩子们骑着滑板车呼啸而过，笑声清脆。一家三口牵着狗慢慢走，父亲低头看手机，母亲看着孩子，狗东张西望。这样的场景，在中国的每一座小城里都在上演。",
+      "我喜欢在黄昏时分散步。这个时间的城市既不像白天那样匆匆忙忙，也不像深夜那样寡淡冷清。它松下来了，所有的紧绷都散了，你能看见人真正的样子——不是上班打卡的那个身份，而是作为一个普通人，在晚霞下面的松弛与真实。",
+      "天色完全暗下来的时候，路灯一盏盏亮起。饭馆里的灯也亮了，热气从门缝里飘出来。我站在河边，看着对岸的灯火倒映在水里，心里忽然很安静。小城没什么轰轰烈烈的故事，但它每一个黄昏，都把平常的日子过得妥帖、踏实。这大约就是生活本来的样子。",
+      "小城的黄昏，也是各种声音交叠的时候。远处传来学校放学的铃声，接着是孩子们的说笑声；菜市场收摊的吆喝，一声比一声急；广场上的音响试了试音，开始放那支跳了十年的曲子。这些声音混在一起，不吵闹，反而让人觉得安心——它们说明，这一天平安地过完了。",
+      "我最喜欢看的是那些老人。他们三三两两地坐在街边的石凳上，有的下棋，有的聊天，有的什么也不做，就眯着眼晒太阳。他们聊的都是些\"没用\"的话题：谁家的孩子考上了大学，今年的菜价涨了没。这些琐碎的话，填满了他们的黄昏。等天彻底黑了，他们才慢悠悠地起身，各自回家吃饭。",
+      "小城的年轻人大多出去了，留下来的多是老人和孩子。所以每到黄昏，街上最热闹的也是这两群人。孩子在广场上疯跑，老人在旁边看着，脸上是那种什么都经历过了的平和。我每次看到这场景，总觉得心里被什么东西轻轻填满。这是一个正在慢慢变老的县城，可它老得从容，老得有尊严。",
+      "我在小城住了三个月，几乎每天都在黄昏出门。后来离开的时候，我坐的大巴从河边经过，正赶上落日。夕阳把整条河照得通红，岸边的柳树垂下来，随风轻轻摇。我忽然有些不舍。这座小城没什么了不起的地方，可它教会了我一件事：幸福不必轰轰烈烈，它就藏在一个个寻常的黄昏里，只要你愿意停下来看。"
+    ]
+  },
+  {
+    id: 14, title: "故园花开正好", author: "温言", tag: "散文", date: "2026-03-30",
+    paragraphs: [
+      "院子里的那株月季，是祖父种下的。我记事的时候它就已经爬满了整面墙，每年五月开得最盛，满墙的深红浅粉，远远看去像一块垂下来的花毯。祖父说，这是他从老家带来的苗，一路上揣在怀里，怕磕着，怕蔫了，照顾孩子似的照顾了一路。",
+      "祖父是个沉默的人，话很少，可侍弄起花来耐心得很。清晨给花浇水，用的是一个豁了口的旧铁壶，水要慢慢地浇，一点一点渗进土里。他说花跟人一样，急不得，你对它好，它记得住；你不理它，它也懒得理你。剪枝的时候更细致，一枝一枝看，剪掉多余的，留下最好的。",
+      "我小时候不懂这些。只记得夏天最爱躲在花墙的阴影里看书，蝉在头顶叫，风把花瓣吹落在书页上。祖父看见了，也不赶我走，只是搬了张小板凳坐在旁边，慢慢喝着茶，什么也不说。那个午后的光影，我记了很多年。",
+      "后来祖父走了。那株月季没人打理，一年年地枯萎，最后只剩下几根光秃秃的枝条。父亲说索性拔了吧，母亲不同意，说再等等看。果然第二年开春，老根上又冒出了新芽，嫩绿嫩绿的，带着细密的绒毛。它竟然又活了过来。",
+      "今年五月我回家，发现整面墙又开满了花。父亲站在花下，正拿着那把豁了口的老铁壶给花浇水，动作和祖父一模一样。阳光穿过花叶洒下来，落在他弯着的背上。我忽然明白，有些东西并不会真正消失，它们只是换了一个人，继续站在那里，等花开。",
+      "祖父当年种这株月季时，我还没出生。父亲说，那时候家里刚盖好这院子，墙是新刷的，空空荡荡。祖父从老家回来，揣着一株去年的月季苗，选了个朝阳的位置，挖坑、埋土、浇水，做得极为认真。他说，院子要有花，才像个家。如今几十年过去了，房子旧了，人也换了，只有这面花墙，年年还开着。",
+      "我有时会想，一个人能在这个世界上留下什么。祖父没留下什么钱，也没留下什么名，他留下的，就是这株月季。他走后，每逢五月花开，家里人都要站在墙下看一会儿。母亲会说：\"这是老爷子种的花。\"一句话，就把人带回到了很多年前。这大概就是最朴素的传承——不是财富，是记忆，是一株花。",
+      "后来我也学着种花。在城里的阳台上摆了七八个花盆，薄荷、茉莉、小番茄，样样都试。起初养一盆死一盆，后来慢慢摸到了门道。给花浇水的时候，我常常想起祖父那把豁口的铁壶，想起他弯腰的背影。原来种花种的不是花，是一种耐心，一种对日子的认真。",
+      "今年的花开得格外好。我剪了几枝带回城里，插在窗台的花瓶里。夜深人静的时候，对着那几朵花，我忽然不那么怕变老了。因为我知道，无论我走多远，那个院子里总有花开着；无论岁月怎么变，总有人会像祖父那样，弯下腰，认认真真地浇一壶水。花开花落，人来人往，这日子，就这样一年一年地传下去。"
+    ]
+  },
+  {
+    id: 15, title: "在人间，慢慢走", author: "沈书言", tag: "随笔", date: "2026-04-02",
+    paragraphs: [
+      "这些年我渐渐养成一个习惯：办事的时候尽量走路。不是为了锻炼，是想让自己慢下来，看看这条走了无数遍的路，今天变成了什么样子。人的眼睛很奇怪，你走得快了，它就什么也看不见；你走得慢了，路上的每个细节才肯对你展开。",
+      "走路的时候，我常看见一些平日看不见的东西。看见墙缝里钻出的一株草，把水泥地顶开了一道细缝；看见早点摊的老板娘招呼客人时，嘴角那颗小小的痣；看见两个老人在街角下棋，围观的人比下棋的还急。这些琐碎的瞬间，构成了城市真实的呼吸。",
+      "我们这个时代什么都在加速：信息加速，情绪加速，连悲伤和快乐都变得短促。人们在屏幕间来回切换，注意力像泡沫一样破碎又重聚。可生活不是一场需要冲刺的比赛，它更像一段需要慢慢走的路，真正的风景，从来不在终点。",
+      "我认识一位修钢笔的老先生，一辈子只做这一件事。他说现在用钢笔的人少了，生意不好，但他不打算改行。他说：\"修一支笔，就是修一个人的一段记忆。这东西急不来，也不该急。\"他磨笔尖的动作很轻，很慢，仿佛在打磨一段岁月。",
+      "所以我还想这样慢慢走下去。慢一点，让花开的时候我在；慢一点，让雨落的时候我听见；慢一点，让爱的人在的时候，我好好地说一句谢谢。这一生不长，也不短，慢一点，才装得下沿途所有的风景与心意。",
+      "慢，也是一种对抗遗忘的方式。我们太快了，快到连一顿饭都没尝出味道就吃完了，快到说的话对方还没听懂就换话题了，快到父母老去、孩子长大，都在我们没注意的时候发生。慢下来，是为了不错过。人生很多遗憾，不是因为没得到，而是因为在得到的时候，我们太匆忙，没好好接住。",
+      "我认识一位每天清晨扫街的大爷，扫得极慢，一段路能扫一个钟头。我问他为什么不扫快点，他笑笑说：\"急什么，扫完了这段，还有下段，活儿是干不完的。倒不如慢慢来，看看这一路的风景。\"这话听着朴素，倒有几分禅意。原来日子是过给自己看的，不是赶给谁看的。",
+      "这些年在路上，我见过太多赶路的人。地铁里刷着手机的人，红灯前焦急看表的人，饭桌上一边吃一边回消息的人。他们走得很快，脸上却少见轻松。我常想，如果有一天我们都能慢下来一点，会怎样？也许路还是那条路，事还是那些事，可心里会多出一点空隙，装得下花，装得下风，装得下那些曾经被我们忽略的温柔。",
+      "人间这一趟，说长不长，说短不短。我们不必非要跑赢谁，也不必急着赶去哪里。把每一步走稳，把每一个当下过好，就已经很好了。所以我愿意慢慢走，慢慢看，慢慢爱。在人间，不慌不忙地走，走到哪里，哪里就是风景。"
+    ]
+  }
+];
+
+/* ================= 状态 ================= */
+let sortAsc = true;
+let keyword = '';
+let activeLetter = 'ALL';
+
+/* ================= 元素 ================= */
+const listEl = document.getElementById('list');
+const searchInput = document.getElementById('searchInput');
+const clearBtn = document.getElementById('clearBtn');
+const sortToggle = document.getElementById('sortToggle');
+const sortLabel = document.getElementById('sortLabel');
+const sortIcon = document.getElementById('sortIcon');
+const letterBar = document.getElementById('letterBar');
+const emptyState = document.getElementById('emptyState');
+const resultHint = document.getElementById('resultHint');
+const statShown = document.getElementById('statShown');
+const statTotal = document.getElementById('statTotal');
+const statWords = document.getElementById('statWords');
+const headerDate = document.getElementById('headerDate');
+
+/* ================= 工具 ================= */
+function countWords(a){
+  return a.paragraphs.join('').replace(/\s/g,'').length;
+}
+function firstLetter(title){
+  const ch = (title || '').trim().charAt(0);
+  if(/[A-Za-z]/.test(ch)) return ch.toUpperCase();
+  if(/[\u4e00-\u9fa5]/.test(ch)) return ch; // 中文取首字
+  return '#';
+}
+function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function escapeReg(s){
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function highlight(text, kw){
+  const safe = escapeHtml(text);
+  if(!kw) return safe;
+  const re = new RegExp('(' + escapeReg(escapeHtml(kw)) + ')', 'gi');
+  return safe.replace(re, '<mark>$1</mark>');
+}
+
+/* ================= 渲染字母栏 ================= */
+const LETTERS = ['ALL','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','中'];
+function renderLetterBar(){
+  letterBar.innerHTML = LETTERS.map(function(L){
+    const isAll = L === 'ALL';
+    return '<button type="button" class="filter-btn h-[36px] min-w-[36px] px-2.5 rounded-full text-[14px] font-medium shrink-0' +
+      (activeLetter === L ? ' is-active' : '') + '" data-letter="' + L + '">' +
+      (isAll ? '全部' : L) + '</button>';
+  }).join('');
+  letterBar.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const L = btn.getAttribute('data-letter');
+      // 每次都给出可观察反馈：更新选中态 + 结果提示 + 列表刷新
+      activeLetter = L;
+      renderLetterBar();
+      render();
+      resultHint.textContent = '已切换筛选：' + (L === 'ALL' ? '全部首字' : '首字「' + L + '」') + '，共 ' + getVisible().length + ' 篇';
+    });
+  });
+}
+
+/* ================= 排序 + 过滤 ================= */
+function getVisible(){
+  let arr = ARTICLES.slice();
+  const kw = keyword.trim().toLowerCase();
+
+  if(kw){
+    arr = arr.filter(function(a){
+      return a.title.toLowerCase().indexOf(kw) > -1;
+    });
+  }
+  if(activeLetter !== 'ALL'){
+    if(activeLetter === '中'){
+      arr = arr.filter(function(a){
+        const L = firstLetter(a.title);
+        return /[\u4e00-\u9fa5]/.test(L);
+      });
+    }else{
+      arr = arr.filter(function(a){ return firstLetter(a.title) === activeLetter; });
+    }
+  }
+
+  arr.sort(function(a, b){
+    const A = a.title, B = b.title;
+    if(A < B) return sortAsc ? -1 : 1;
+    if(A > B) return sortAsc ? 1 : -1;
+    return 0;
+  });
+  return arr;
+}
+
+/* ================= 渲染列表 ================= */
+function render(){
+  const arr = getVisible();
+  const kw = keyword.trim();
+
+  statShown.textContent = arr.length;
+  resultHint.textContent = kw
+    ? '搜索「' + kw + '」共找到 ' + arr.length + ' 篇文章' + (activeLetter !== 'ALL' ? '（限定首字：' + activeLetter + '）' : '')
+    : (activeLetter !== 'ALL' ? '当前按首字「' + activeLetter + '」筛选，共 ' + arr.length + ' 篇' : '共展出 ' + arr.length + ' 篇文章');
+
+  if(arr.length === 0){
+    listEl.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    return;
+  }
+  emptyState.classList.add('hidden');
+
+  listEl.innerHTML = arr.map(function(a, i){
+    const words = countWords(a);
+    const letter = firstLetter(a.title);
+    return '' +
+    '<article class="piece-card reveal p-5 md:p-6" data-id="' + a.id + '" style="animation-delay:' + (i * 45) + 'ms">' +
+      '<button type="button" class="w-full text-left piece-toggle" aria-expanded="false">' +
+        '<div class="flex items-start gap-4">' +
+          '<span class="alpha-badge">' + escapeHtml(letter) + '</span>' +
+          '<div class="flex-1 min-w-0">' +
+            '<h2 class="serif-display text-[20px] md:text-[22px] font-bold leading-snug text-[#1c1a17]">' + highlight(a.title, kw) + '</h2>' +
+            '<div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2.5 text-[13px] text-[var(--muted)]">' +
+              '<span>' + escapeHtml(a.author) + '</span>' +
+              '<span class="text-[rgba(28,26,23,.2)]">·</span>' +
+              '<span>' + escapeHtml(a.date) + '</span>' +
+              '<span class="text-[rgba(28,26,23,.2)]">·</span>' +
+              '<span>约 ' + words + ' 字</span>' +
+              '<span class="tag-chip ml-auto">' + escapeHtml(a.tag) + '</span>' +
+            '</div>' +
+            '<p class="piece-summary text-[15px] leading-relaxed text-[#5f5850] mt-3 line-clamp-2">' + escapeHtml(a.paragraphs[0].slice(0, 62)) + '…</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="flex items-center gap-1.5 mt-4 text-[13px] font-medium text-[rgb(var(--brand-rgb))] toggle-hint">' +
+          '<span class="hint-text">展开阅读全文</span>' +
+          '<svg class="w-[15px] h-[15px] shrink-0 transition-transform duration-300 chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>' +
+        '</div>' +
+      '</button>' +
+      '<div class="piece-body mt-5 pt-5 border-t border-[rgba(28,26,23,.09)]">' +
+        '<div class="piece-text text-[16px] md:text-[17px] text-[#2c2925]">' +
+          a.paragraphs.map(function(p){ return '<p>' + escapeHtml(p) + '</p>'; }).join('') +
+        '</div>' +
+        '<div class="mt-5 pt-4 border-t border-dashed border-[rgba(28,26,23,.12)] flex items-center justify-between">' +
+          '<span class="text-[13px] text-[var(--muted)]">— 全文完 · ' + escapeHtml(a.author) + '</span>' +
+          '<span class="text-[13px] text-[var(--muted)]">' + words + ' 字</span>' +
+        '</div>' +
+      '</div>' +
+    '</article>';
+  }).join('');
+
+  // 展开/收起
+  listEl.querySelectorAll('.piece-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const card = btn.closest('.piece-card');
+      const open = card.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      const hint = card.querySelector('.hint-text');
+      const chev = card.querySelector('.chev');
+      if(hint) hint.textContent = open ? '收起文章' : '展开阅读全文';
+      if(chev) chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+      const sum = card.querySelector('.piece-summary');
+      if(sum) sum.style.display = open ? 'none' : '';
+    });
+  });
+}
+
+/* ================= 事件 ================= */
+searchInput.addEventListener('input', function(){
+  keyword = searchInput.value;
+  clearBtn.classList.toggle('hidden', keyword.length === 0);
+  render();
+});
+searchInput.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){ searchInput.value=''; keyword=''; clearBtn.classList.add('hidden'); render(); }
+});
+clearBtn.addEventListener('click', function(){
+  searchInput.value = '';
+  keyword = '';
+  clearBtn.classList.add('hidden');
+  searchInput.focus();
+  render();
+});
+sortToggle.addEventListener('click', function(){
+  sortAsc = !sortAsc;
+  sortLabel.textContent = sortAsc ? 'A → Z 升序' : 'Z → A 降序';
+  sortIcon.innerHTML = sortAsc
+    ? '<path d="M7 4v16M7 20l-3-3M17 20V4M17 4l3 3"></path>'
+    : '<path d="M7 20V4M7 4l-3 3M17 4v16M17 20l3-3"></path>';
+  render();
+});
+
+/* ================= 初始化 ================= */
+(function init(){
+  const now = new Date();
+  headerDate.textContent = now.getFullYear() + '.' + pad2(now.getMonth()+1) + '.' + pad2(now.getDate());
+  const total = ARTICLES.reduce(function(s, a){ return s + countWords(a); }, 0);
+  statTotal.textContent = ARTICLES.length;
+  statWords.textContent = total.toLocaleString('en-US');
+  renderLetterBar();
+  render();
+})();
+</script>
+</body>
+</html>
+
